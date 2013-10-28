@@ -88,7 +88,19 @@ object Anagrams {
    */
   def combinations(occurrences: Occurrences): List[Occurrences] = occurrences match {
     case Nil => List(Nil)
-    case (c, n) :: os => (1 until n).map(i => combinations(subtract(occurrences, List((c, i))))).toList.flatten
+    case (c, n) :: os =>
+      val heads = (0 to n).map(occur(c, _))
+      val tailCombs = combinations(os)
+      occurrences :: cartesianProduct(heads, tailCombs)
+  }
+
+  def cartesianProduct[T](lhs: Seq[List[T]], rhs: Seq[List[T]]): List[List[T]] = {
+    lhs.map(l => rhs.map(r => l ++ r)).flatten.toList
+  }
+
+  def occur(c: Char, i: Int): Occurrences = (c, i) match {
+    case (c, 0) => Nil
+    case _ => List((c, i))
   }
 
   /**
@@ -108,6 +120,7 @@ object Anagrams {
       case ((cx, nx), (cy, ny)) if (cx == cy) => if (nx > ny) (cx, nx - ny) :: subtract(xs, ys) else subtract(xs, ys)
       case ((cx, nx), (cy, ny)) if (cx != cy) => ax :: subtract(xs, ay :: ys)
     }
+    case _ => throw new Exception()
   }
 
   /**
@@ -151,6 +164,22 @@ object Anagrams {
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = ???
+  def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
+    val occurrences = sentenceOccurrences(sentence)
+    anagrams(occurrences)
+  }
+
+  def anagrams(occurrences: Occurrences): List[Sentence] = occurrences match {
+    case Nil => List(Nil)
+    case _ => {
+      val combs = combinations(occurrences)
+      combs.filter { !dictionaryByOccurrences.get(_).isEmpty }
+        .map { o =>
+          val words = dictionaryByOccurrences(o)
+          val rest = anagrams(subtract(occurrences, o))
+          cartesianProduct(words.map(List(_)), rest)
+        }.flatten.toList
+    }
+  }
 
 }
